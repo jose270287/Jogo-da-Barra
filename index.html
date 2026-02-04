@@ -187,16 +187,24 @@ function iniciarJogo() {
     valorDinamicoEl.innerText = "";
     escolheu = false;
 
-    tempoReal = Math.floor(Math.random() * 21) + 10;
+   let intervalo = 11 - nivel;
+if (intervalo < 1) intervalo = 1;
 
-    let intervalo = 11 - nivel;
-    if (intervalo < 1) intervalo = 1;
+// eixo fixo em 20
+let alternativas = [
+    20 - intervalo,
+    20,
+    20 + intervalo
+];
 
-    let alternativas = [
-        tempoReal - intervalo,
-        tempoReal,
-        tempoReal + intervalo
-    ].map(v => Math.max(1, v));
+// garantir mínimo 10
+alternativas = alternativas.map(v => Math.max(10, v));
+
+// escolher o tempo real entre as alternativas
+tempoReal = alternativas[Math.floor(Math.random() * alternativas.length)];
+
+// embaralhar para exibição
+alternativas.sort(() => Math.random() - 0.5);
 
     // Remover duplicatas caso o intervalo seja pequeno
     alternativas = [...new Set(alternativas)];
