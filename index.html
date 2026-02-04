@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo da Barra de Velocidade</title>
+
+<style>
+    :root {
+        --primary: #00ffcc;
+        --secondary: #00ccff;
+        --bg: #121212;
+        --card-bg: #1e1e1e;
+        --text: #ffffff;
+    }
+
+    body {
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        text-align: center;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    #container {
+        width: 90%;
+        max-width: 600px;
+        padding: 30px;
+        background: var(--card-bg);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    h2 {
+        font-size: 28px;
+        margin-bottom: 30px;
+        color: #ddd;
+    }
+
+    /* BARRA DE PROGRESSO MAIOR E ESTILIZADA */
+    #barra {
+        width: 100%;
+        height: 60px; /* Aumentado */
+        background: #333;
+        border-radius: 30px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        position: relative;
+        border: 4px solid #444;
+        box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+    }
+
+    #progresso {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        box-shadow: 0 0 20px var(--primary);
+        transition: width 0.05s linear;
+    }
+
+    #valor-dinamico {
+        margin-bottom: 20px;
+        font-size: 48px; /* Destaque para o contador inicial */
+        font-weight: 800;
+        color: var(--primary);
+        height: 60px;
+        text-shadow: 0 0 15px rgba(0, 255, 204, 0.5);
+    }
+
+    /* BOTÕES DE OPÇÕES */
+    #opcoes {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    button {
+        padding: 20px 40px;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 12px;
+        border: none;
+        background: #444;
+        color: white;
+        transition: all 0.2s ease;
+        min-width: 100px;
+    }
+
+    button:hover {
+        background: var(--secondary);
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 204, 255, 0.4);
+    }
+
+    button:active {
+        transform: translateY(0);
+    }
+
+    /* PAINEL DE INFORMAÇÕES */
+    #info {
+        margin-top: 40px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        padding-top: 20px;
+        border-top: 1px solid #444;
+    }
+
+    .stat-card {
+        background: rgba(255,255,255,0.05);
+        padding: 15px;
+        border-radius: 10px;
+    }
+
+    .stat-label {
+        display: block;
+        font-size: 14px;
+        color: #888;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .stat-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--secondary);
+    }
+</style>
+</head>
+
+<body>
+
+<div id="container">
+    <h2>Quanto tempo dura a barra?</h2>
+
+    <div id="barra">
+        <div id="progresso"></div>
+    </div>
+
+    <div id="valor-dinamico"></div>
+
+    <div id="opcoes"></div>
+
+    <div id="info">
+        <div class="stat-card">
+            <span class="stat-label">Nível Atual</span>
+            <span id="nivel" class="stat-value">1</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Recorde Nível</span>
+            <span id="recordeNivel" class="stat-value">1</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Pontos</span>
+            <span id="pontos" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Recorde Pontos</span>
+            <span id="recordePontos" class="stat-value">0</span>
+        </div>
+    </div>
+</div>
+
+<script>
+let nivel = 1;
+let pontos = 0;
+
+let recordeNivel = Number(localStorage.getItem("recordeNivel")) || 1;
+let recordePontos = Number(localStorage.getItem("recordePontos")) || 0;
+
+let tempoReal = 0;
+let animacao = null;
+let escolheu = false;
+let inicioTempo = 0;
+
+const valorDinamicoEl = document.getElementById("valor-dinamico");
+
+function iniciarJogo() {
+    document.getElementById("progresso").style.width = "0%";
+    document.getElementById("opcoes").innerHTML = "";
+    valorDinamicoEl.innerText = "";
+    escolheu = false;
+
+    tempoReal = Math.floor(Math.random() * 21) + 10;
+
+    let intervalo = 11 - nivel;
+    if (intervalo < 1) intervalo = 1;
+
+    let alternativas = [
+        tempoReal - intervalo,
+        tempoReal,
+        tempoReal + intervalo
+    ].map(v => Math.max(1, v));
+
+    // Remover duplicatas caso o intervalo seja pequeno
+    alternativas = [...new Set(alternativas)];
+    alternativas.sort(() => Math.random() - 0.5);
+
+    alternativas.forEach(valor => {
+        let btn = document.createElement("button");
+        btn.innerText = valor + "s";
+        btn.onclick = () => verificar(valor);
+        document.getElementById("opcoes").appendChild(btn);
+    });
+
+    inicioTempo = Date.now();
+
+    animacao = setInterval(() => {
+        let passado = (Date.now() - inicioTempo) / 1000;
+        let progresso = Math.min((passado / tempoReal) * 100, 100);
+        document.getElementById("progresso").style.width = progresso + "%";
+
+        let valorAtual = Math.ceil(passado);
+
+        if (valorAtual <= 3) {
+            valorDinamicoEl.innerText = valorAtual;
+        } else {
+            valorDinamicoEl.innerText = "";
+        }
+
+        if (progresso >= 100) {
+            clearInterval(animacao);
+            tempoEsgotado();
+        }
+    }, 16);
+}
+
+function verificar(escolha) {
+    if (escolheu) return;
+    escolheu = true;
+    clearInterval(animacao);
+    
+    let tempoDecorrido = (Date.now() - inicioTempo) / 1000;
+    let rapidez = Math.max(0, tempoReal - tempoDecorrido);
+
+    if (escolha === tempoReal) {
+        let ganho = Math.max(5, Math.floor(rapidez * 10));
+        pontos += ganho;
+        nivel++;
+        alert(`✨ ACERTOU! ✨\nTempo real: ${tempoReal}s\n+${ganho} pontos`);
+    } else {
+        nivel = Math.max(1, nivel - 1);
+        pontos = 0;
+        alert(`❌ ERROU!\nTempo real: ${tempoReal}s`);
+    }
+
+    atualizarInfo();
+    iniciarJogo();
+}
+
+function tempoEsgotado() {
+    if (escolheu) return;
+    escolheu = true;
+    nivel = Math.max(1, nivel - 1);
+    pontos = 0;
+    alert(`⌛ TEMPO ESGOTADO!\nResposta correta: ${tempoReal}s`);
+    atualizarInfo();
+    iniciarJogo();
+}
+
+function atualizarInfo() {
+    if (nivel > recordeNivel) {
+        recordeNivel = nivel;
+        localStorage.setItem("recordeNivel", recordeNivel);
+    }
+    if (pontos > recordePontos) {
+        recordePontos = pontos;
+        localStorage.setItem("recordePontos", recordePontos);
+    }
+
+    document.getElementById("nivel").innerText = nivel;
+    document.getElementById("pontos").innerText = pontos;
+    document.getElementById("recordeNivel").innerText = recordeNivel;
+    document.getElementById("recordePontos").innerText = recordePontos;
+}
+
+atualizarInfo();
+iniciarJogo();
+</script>
+
+</body>
+</html>
